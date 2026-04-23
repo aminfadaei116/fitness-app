@@ -21,3 +21,11 @@ def open_stream(url: str, retries: int = 5, delay: float = 2.0) -> cv2.VideoCapt
         if attempt < retries:
             time.sleep(delay)
     sys.exit(f"Could not connect to {url}. Check the IP and that the camera app is running.")
+
+
+def open_file(path: str) -> cv2.VideoCapture:
+    cap = cv2.VideoCapture(path)
+    if not cap.isOpened():
+        sys.exit(f"Could not open video file: {path}")
+    print(f"Opened file: {path}")
+    return cap

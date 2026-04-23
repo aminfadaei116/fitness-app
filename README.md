@@ -1,6 +1,6 @@
 # Fitness App — Phone Camera Viewer
 
-Stream your phone's camera to your Mac/PC in real-time over Wi-Fi using Python and OpenCV.
+Stream your phone's camera to your Mac/PC in real-time over Wi-Fi, or process a local video file, using Python and OpenCV.
 
 ---
 
@@ -42,6 +42,8 @@ pip install -r requirements.txt
 
 ## 3. Run the viewer
 
+### Live phone camera
+
 ```bash
 # Basic — just pass the phone's IP
 python phone_camera.py --ip 10.88.111.11:8080
@@ -51,17 +53,33 @@ python phone_camera.py --ip 10.88.111.11:8080 --port 4747
 
 # Full URL (useful for apps that use a different path)
 python phone_camera.py --url http://10.88.111.11:8080/video
+```
 
-# Record to output.mp4 while viewing
+### Local video file
+
+```bash
+# Process any video file OpenCV supports (mp4, mov, avi, mkv, …)
+python phone_camera.py --file /path/to/clip.mp4
+
+# With pose overlay and recording
+python phone_camera.py --file /path/to/clip.mp4 --pose --record
+```
+
+The viewer exits automatically when the file ends.
+
+### Common options
+
+```bash
+# Record output to output.mp4
 python phone_camera.py --ip 10.88.111.11:8080 --record
 
-# Resize the display window (keep original resolution when recording)
+# Resize the display window (original resolution is kept for recording)
 python phone_camera.py --ip 10.88.111.11:8080 --width 960
 ```
 
 ### Pose estimation
 
-Pass `--pose` to overlay 3-D skeleton landmarks on the stream. An optional model name selects the backend (default: `mediapipe`).
+Pass `--pose` to overlay 3-D skeleton landmarks on any source. An optional model name selects the backend (default: `mediapipe`).
 
 ```bash
 # Enable pose estimation (uses mediapipe by default)
@@ -70,8 +88,8 @@ python phone_camera.py --ip 10.88.111.11:8080 --pose
 # Explicitly select a model
 python phone_camera.py --ip 10.88.111.11:8080 --pose mediapipe
 
-# Combine with other flags
-python phone_camera.py --ip 10.88.111.11:8080 --pose --record --width 960
+# Works with --file too
+python phone_camera.py --file clip.mp4 --pose --record --width 960
 ```
 
 The MediaPipe backend draws a full-body skeleton and a real-time z-depth HUD for 13 key joints. The model is loaded lazily — only when `--pose` is passed.
