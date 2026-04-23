@@ -59,6 +59,23 @@ python phone_camera.py --ip 10.88.111.11:8080 --record
 python phone_camera.py --ip 10.88.111.11:8080 --width 960
 ```
 
+### Pose estimation
+
+Pass `--pose` to overlay 3-D skeleton landmarks on the stream. An optional model name selects the backend (default: `mediapipe`).
+
+```bash
+# Enable pose estimation (uses mediapipe by default)
+python phone_camera.py --ip 10.88.111.11:8080 --pose
+
+# Explicitly select a model
+python phone_camera.py --ip 10.88.111.11:8080 --pose mediapipe
+
+# Combine with other flags
+python phone_camera.py --ip 10.88.111.11:8080 --pose --record --width 960
+```
+
+The MediaPipe backend draws a full-body skeleton and a real-time z-depth HUD for 13 key joints. The model is loaded lazily — only when `--pose` is passed.
+
 ### Keyboard shortcuts
 
 | Key | Action |
@@ -96,3 +113,4 @@ python phone_camera.py --ip 10.88.111.11:8080 --width 960
 - Python 3.8+
 - `opencv-python` — for capture and display
 - `numpy` — required by OpenCV
+- `mediapipe` — required only when using `--pose mediapipe`
