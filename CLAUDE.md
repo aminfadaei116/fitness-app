@@ -4,42 +4,81 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-A single-script Python tool that streams a phone's MJPEG camera feed to a desktop window via Wi-Fi and optionally overlays MediaPipe 3-D pose landmarks. The entry point is [phone_camera.py](phone_camera.py).
+Python tool that streams a phone's MJPEG camera feed (or local video/webcam) to a desktop window via Wi-Fi and optionally overlays pose landmarks. Entry point: [phone_camera.py](phone_camera.py).
 
 ## Setup
 
+conda is recommended (Python 3.11):
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+conda create -n fitness python=3.11 -y
+conda activate fitness
 ```
 
-Requirements: `opencv-python>=4.8.0`, `numpy>=1.24.0,<2.0.0`, `mediapipe==0.10.21`
+Install only the backends you need:
+
+```bash
+# Core (always required)
+pip install opencv-python "numpy>=1.24.0,<2.0.0"
+
+# MediaPipe (default pose backend)
+pip install mediapipe==0.10.21
+
+# YOLO (--pose yolo)
+pip install ultralytics
+
+# MMPose (--pose mmpose) — requires openmim build order
+pip install --upgrade pip setuptools wheel
+pip install -U openmim
+mim install mmengine
+pip install mmcv --no-build-isolation
+mim install "mmdet>=3.1.0" "mmpose>=1.1.0"
+```
 
 ## Running
 
-```bash
-# Basic stream
-python phone_camera.py --ip 10.88.111.11:8080
+`--ip`, `--url`, `--file`, and `--webcam` are mutually exclusive; one is required.
 
-# Local video file
+```bash
+# Phone stream
+python phone_camera.py --ip 10.88.111.11:8080
+python phone_camera.py --url http://10.88.111.11:8080/video
+
+# Webcam (device index, default 0)
+python phone_camera.py --webcam
+python phone_camera.py --webcam 1
+
+# Local file
 python phone_camera.py --file /path/to/clip.mp4
 
-# With 3-D pose overlay (defaults to mediapipe)
-python phone_camera.py --ip 10.88.111.11:8080 --pose
-python phone_camera.py --file clip.mp4 --pose mediapipe
+# Pose overlay (model defaults to mediapipe)
+python phone_camera.py --webcam --pose
+python phone_camera.py --webcam --pose yolo
+python phone_camera.py --webcam --pose mmpose
 
-# Full URL + record + resize display
-python phone_camera.py --url http://10.88.111.11:8080/video --record --width 960
+# Record full-res + resize display
+python phone_camera.py --ip 10.88.111.11:8080 --record --width 960
 ```
 
-`--ip`, `--url`, and `--file` are mutually exclusive; one is required. `--pose` takes an optional model name (default: `mediapipe`); the model is imported lazily only when `--pose` is passed.
+Keyboard shortcuts: `q` quit, `s` screenshot.
 
 ## Architecture
 
-[phone_camera.py](phone_camera.py) is the CLI entry point (`main`). Supporting logic lives in the `fitness_app` package:
+[phone_camera.py](phone_camera.py) — CLI entry point (`main`). Sets `live=True` for network/webcam sources (reconnects on drop) and `live=False` for files (stops at end).
 
-- [fitness_app/stream.py](fitness_app/stream.py) — `build_url` (constructs MJPEG URL, avoids double-appending port), `open_stream` (retries `cv2.VideoCapture` up to 5 times with a 2 s delay, exits on failure), and `open_file` (opens a local video file, exits on failure).
-- [fitness_app/pose.py](fitness_app/pose.py) — `_DEPTH_LANDMARKS` (13 key joint indices), `draw_depth_overlay` (z-depth HUD in top-left corner), `MediaPipePoseEstimator` (encapsulates MediaPipe Pose state and processing), `_ESTIMATORS` registry dict, and `build_estimator(name)` factory.
+**[fitness_app/stream.py](fitness_app/stream.py)**
+- `build_url` — constructs MJPEG URL, avoids double-appending port
+- `open_stream` — retries `cv2.VideoCapture` up to 5× with 2 s delay
+- `open_file` / `open_webcam` — open local file or webcam by device index
 
-`main` sets a `live` flag to distinguish network streams (reconnect on drop) from file sources (stop at end). `main` calls `build_estimator(args.pose)` to get an estimator with a `process(frame) -> frame` and `close()` interface. To add a new pose model: implement a class with those two methods and add it to `_ESTIMATORS` in [fitness_app/pose.py](fitness_app/pose.py). Recording always captures full-resolution frames; `--width` only downscales the display window.
+**[fitness_app/pose.py](fitness_app/pose.py)**
+- `MediaPipePoseEstimator` — MediaPipe Pose (model_complexity=1), draws skeleton + z-depth HUD via `draw_depth_overlay`
+- `YOLOPoseEstimator` — YOLOv11-pose with ByteTrack multi-person tracking; loads `yolo11n-pose.pt` (committed to repo)
+- `MMPosePoseEstimator` — MMPoseInferencer (RTMPose-m); forces CPU on Apple Silicon because MPS lacks NMS ops
+- `_ESTIMATORS` registry dict + `build_estimator(name)` factory — all models imported lazily
+
+**To add a new pose model:** implement a class with `process(frame: np.ndarray) -> np.ndarray` and `close()`, then register it in `_ESTIMATORS`.
+
+**[yolo_pose.py](yolo_pose.py)** — standalone exploration script using the Ultralytics stream API directly; not wired into the main CLI.
+
+Recording (`--record`) always writes full-resolution frames to `output.mp4`; `--width` only downscales the display window.

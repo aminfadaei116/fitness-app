@@ -1,12 +1,6 @@
 # Fitness App — Phone Camera Viewer
 
-Stream your phone's camera to your Mac/PC in real-time over Wi-Fi, or process a local video file, using Python and OpenCV.
-
----
-
-## How it works
-
-Your phone runs a free app that broadcasts its camera as an MJPEG HTTP stream on your local network. The Python script connects to that stream and displays it in a window.
+Stream your phone's camera to your Mac/PC in real-time over Wi-Fi, or process a local video file, using Python and OpenCV. Optionally overlay 3-D pose landmarks via MediaPipe, YOLOv11-pose, or MMPose.
 
 ---
 
@@ -27,16 +21,51 @@ Your phone runs a free app that broadcasts its camera as an MJPEG HTTP stream on
 
 ---
 
-## 2. Set up Python
+## 2. Set up the conda environment
+
+### Create and activate
 
 ```bash
-# Create a virtual environment (optional but recommended)
-python3 -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
+conda create -n fitness python=3.11 -y
+conda activate fitness
 ```
+
+### Core dependencies
+
+```bash
+pip install opencv-python "numpy>=1.24.0,<2.0.0"
+```
+
+### Pose estimation backends (install only what you need)
+
+#### MediaPipe (default, easiest)
+
+```bash
+pip install mediapipe==0.10.21
+```
+
+#### YOLOv11-pose (via Ultralytics)
+
+```bash
+pip install ultralytics
+```
+
+The model file `yolo11n-pose.pt` is downloaded automatically on first run.
+
+#### MMPose (top-down, RTMPose)
+
+MMPose requires building `mmcv` from source. Run in order:
+
+```bash
+pip install --upgrade pip setuptools wheel
+pip install -U openmim
+mim install mmengine
+pip install mmcv --no-build-isolation
+mim install "mmdet>=3.1.0" "mmpose>=1.1.0"
+```
+
+> On Apple Silicon (MPS backend), NMS ops are unsupported — the estimator forces CPU automatically.  
+> First run auto-downloads RTMPose-m (~50 MB).
 
 ---
 
@@ -45,27 +74,25 @@ pip install -r requirements.txt
 ### Live phone camera
 
 ```bash
-# Basic — just pass the phone's IP
 python phone_camera.py --ip 10.88.111.11:8080
-
-# Custom port
-python phone_camera.py --ip 10.88.111.11:8080 --port 4747
-
-# Full URL (useful for apps that use a different path)
 python phone_camera.py --url http://10.88.111.11:8080/video
+```
+
+### Webcam
+
+```bash
+# Default device (index 0)
+python phone_camera.py --webcam
+
+# Specific device
+python phone_camera.py --webcam 1
 ```
 
 ### Local video file
 
 ```bash
-# Process any video file OpenCV supports (mp4, mov, avi, mkv, …)
 python phone_camera.py --file /path/to/clip.mp4
-
-# With pose overlay and recording
-python phone_camera.py --file /path/to/clip.mp4 --pose --record
 ```
-
-The viewer exits automatically when the file ends.
 
 ### Common options
 
@@ -73,33 +100,44 @@ The viewer exits automatically when the file ends.
 # Record output to output.mp4
 python phone_camera.py --ip 10.88.111.11:8080 --record
 
-# Resize the display window (original resolution is kept for recording)
+# Resize display window (recording stays full-res)
 python phone_camera.py --ip 10.88.111.11:8080 --width 960
 ```
 
-### Pose estimation
+---
 
-Pass `--pose` to overlay 3-D skeleton landmarks on any source. An optional model name selects the backend (default: `mediapipe`).
+## 4. Pose estimation
+
+Pass `--pose [model]` to any source. Available models:
+
+| Model | Flag | Notes |
+|-------|------|-------|
+| MediaPipe | `--pose` or `--pose mediapipe` | Default. Full-body skeleton + z-depth HUD. |
+| YOLOv11-pose | `--pose yolo` | ByteTrack multi-person tracking. |
+| MMPose | `--pose mmpose` | RTMPose-m, top-down, highest accuracy. |
 
 ```bash
-# Enable pose estimation (uses mediapipe by default)
-python phone_camera.py --ip 10.88.111.11:8080 --pose
+# MediaPipe (default)
+python phone_camera.py --webcam --pose
 
-# Explicitly select a model
-python phone_camera.py --ip 10.88.111.11:8080 --pose mediapipe
+# YOLO
+python phone_camera.py --webcam --pose yolo
 
-# Works with --file too
-python phone_camera.py --file clip.mp4 --pose --record --width 960
+# MMPose
+python phone_camera.py --webcam --pose mmpose
+
+# File + MMPose + record
+python phone_camera.py --file clip.mp4 --pose mmpose --record --width 960
 ```
 
-The MediaPipe backend draws a full-body skeleton and a real-time z-depth HUD for 13 key joints. The model is loaded lazily — only when `--pose` is passed.
+---
 
-### Keyboard shortcuts
+## 5. Keyboard shortcuts
 
 | Key | Action |
 |-----|--------|
 | `q` | Quit |
-| `s` | Save a screenshot (saved as `screenshot_<timestamp>.jpg`) |
+| `s` | Save screenshot (`screenshot_<timestamp>.jpg`) |
 
 ---
 
@@ -108,10 +146,12 @@ The MediaPipe backend draws a full-body skeleton and a real-time z-depth HUD for
 | Problem | Fix |
 |---------|-----|
 | "Could not connect" | Confirm both devices are on the same Wi-Fi network |
-| Black screen / no image | Try the full URL from the app's screen directly in your browser first |
-| Wrong IP | Your phone's IP can change; recheck it in the app each session |
-| Low FPS | Reduce resolution in the IP Webcam app settings, or use `--width` to downscale display |
-| Port already in use | Change port in the app settings and pass `--port <new-port>` |
+| Black screen / no image | Open the stream URL directly in a browser to verify |
+| Wrong IP | Phone IP can change; recheck it in the app each session |
+| Low FPS | Reduce resolution in IP Webcam settings, or use `--width` |
+| Port in use | Change port in app settings and pass `--port <new-port>` |
+| `No module named 'pkg_resources'` (mmcv build) | `pip install --upgrade setuptools`, then `pip install mmcv --no-build-isolation` |
+| MMPose MPS crash | Already handled — estimator forces CPU on Apple Silicon |
 
 ---
 
@@ -128,7 +168,9 @@ The MediaPipe backend draws a full-body skeleton and a real-time z-depth HUD for
 
 ## Requirements
 
-- Python 3.8+
-- `opencv-python` — for capture and display
-- `numpy` — required by OpenCV
-- `mediapipe` — required only when using `--pose mediapipe`
+- Python 3.11 (conda recommended)
+- `opencv-python` — capture and display
+- `numpy<2.0` — required by OpenCV and MediaPipe
+- `mediapipe==0.10.21` — `--pose mediapipe`
+- `ultralytics` — `--pose yolo`
+- `mmengine`, `mmcv`, `mmdet`, `mmpose` — `--pose mmpose`

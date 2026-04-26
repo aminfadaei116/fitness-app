@@ -90,11 +90,32 @@ class YOLOPoseEstimator:
         pass
 
 
+class MMPosePoseEstimator:
+    """Pose estimator backed by MMPose via MMPoseInferencer (top-down, ViTPose-compatible)."""
+
+    def __init__(self, pose2d: str = "human") -> None:
+        from mmpose.apis import MMPoseInferencer
+        # MPS backend lacks NMS op — force CPU
+        self._inferencer = MMPoseInferencer(pose2d=pose2d, device="cpu")
+
+    def process(self, frame: np.ndarray) -> np.ndarray:
+        gen = self._inferencer(frame, show=False, return_vis=True)
+        result = next(gen)
+        vis = result.get("visualization")
+        if vis:
+            return cv2.cvtColor(vis[0], cv2.COLOR_RGB2BGR)
+        return frame
+
+    def close(self) -> None:
+        pass
+
+
 # To add a new model: implement a class with process(frame) -> frame and close(),
 # then register it here.
 _ESTIMATORS: dict[str, type] = {
     "mediapipe": MediaPipePoseEstimator,
     "yolo": YOLOPoseEstimator,
+    "mmpose": MMPosePoseEstimator,
 }
 
 
