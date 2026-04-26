@@ -29,3 +29,11 @@ def open_file(path: str) -> cv2.VideoCapture:
         sys.exit(f"Could not open video file: {path}")
     print(f"Opened file: {path}")
     return cap
+
+
+def open_webcam(device_id: int = 0) -> cv2.VideoCapture:
+    cap = cv2.VideoCapture(device_id)
+    if not cap.isOpened():
+        sys.exit(f"Could not open webcam (device {device_id}).")
+    print(f"Opened webcam (device {device_id}).")
+    return cap

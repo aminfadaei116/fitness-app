@@ -73,10 +73,28 @@ class MediaPipePoseEstimator:
         self._pose.close()
 
 
+class YOLOPoseEstimator:
+    """Pose estimator backed by YOLOv11-pose with ByteTrack."""
+
+    def __init__(self, model_path: str = "yolo11n-pose.pt") -> None:
+        from ultralytics import YOLO
+        self._model = YOLO(model_path)
+
+    def process(self, frame: np.ndarray) -> np.ndarray:
+        results = self._model.track(frame, persist=True, tracker="bytetrack.yaml", verbose=False)
+        if results and results[0] is not None:
+            return results[0].plot()
+        return frame
+
+    def close(self) -> None:
+        pass
+
+
 # To add a new model: implement a class with process(frame) -> frame and close(),
 # then register it here.
 _ESTIMATORS: dict[str, type] = {
     "mediapipe": MediaPipePoseEstimator,
+    "yolo": YOLOPoseEstimator,
 }
 
 

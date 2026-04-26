@@ -14,7 +14,7 @@ import argparse
 import time
 import cv2
 
-from fitness_app.stream import build_url, open_stream, open_file
+from fitness_app.stream import build_url, open_stream, open_file, open_webcam
 from fitness_app.pose import build_estimator
 
 
@@ -23,7 +23,9 @@ def main() -> None:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--ip",   help="Phone IP[:port] (e.g. 10.88.111.11:8080)")
     group.add_argument("--url",  help="Full stream URL (e.g. http://10.88.111.11:8080/video)")
-    group.add_argument("--file", metavar="PATH", help="Path to a local video file (e.g. clip.mp4)")
+    group.add_argument("--file",   metavar="PATH", help="Path to a local video file (e.g. clip.mp4)")
+    group.add_argument("--webcam", metavar="ID",   nargs="?", const=0, type=int, default=None,
+                       help="Webcam device index (default: 0)")
     parser.add_argument("--port",   type=int, default=8080,       help="Port when not embedded in --ip (default: 8080)")
     parser.add_argument("--pose",   nargs="?", const="mediapipe", default=None, metavar="MODEL",
                         help="Pose estimation model to use (default: mediapipe)")
@@ -34,6 +36,9 @@ def main() -> None:
     if args.file:
         cap = open_file(args.file)
         live = False
+    elif args.webcam is not None:
+        cap = open_webcam(args.webcam)
+        live = True
     else:
         url = args.url if args.url else build_url(args.ip, args.port)
         cap = open_stream(url)
