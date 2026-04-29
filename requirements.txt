@@ -1,8 +1,19 @@
+# Core — required for phone_camera.py (capture, display, recording)
 opencv-python>=4.8.0
-numpy>=1.24.0,<2.0.0
-mediapipe==0.10.21
-# MMPose stack — install via openmim for correct mmcv build:
-#   pip install -U openmim && mim install mmengine "mmcv>=2.0.1" "mmdet>=3.1.0" "mmpose>=1.1.0"
-mmpose>=1.1.0
-mmdet>=3.1.0
-mmengine>=0.9.0
+# NumPy 1.26 has no wheels for Python 3.13 — pip tries to compile from source without MSVC.
+numpy>=1.24.0,<2.0.0; python_version < "3.13"
+numpy>=2.0.0,<3.0.0; python_version >= "3.13"
+
+# MediaPipe pose (legacy mp.solutions on Py<=3.12 + mediapipe==0.10.21; Tasks API on 3.13+ wheels)
+mediapipe==0.10.21; python_version < "3.13"
+mediapipe>=0.10.30,<0.11; python_version >= "3.13"
+
+# YOLOv11-pose (--pose yolo); model loads on first run
+ultralytics
+
+# MMPose (--pose mmpose) — mmcv must be installed separately; do NOT pip-install mmpose alone:
+#   pip install --upgrade pip setuptools wheel
+#   pip install -U openmim
+#   mim install mmengine
+#   pip install mmcv --no-build-isolation
+#   mim install "mmdet>=3.1.0" "mmpose>=1.1.0"
