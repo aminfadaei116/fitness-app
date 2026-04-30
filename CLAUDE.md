@@ -62,15 +62,18 @@ python phone_camera.py --ip 10.88.111.11:8080 --record --width 960
 
 Keyboard shortcuts: `q` quit, `s` screenshot.
 
-## Datasets (Fit3D / M3GYM)
+## Datasets (public pose corpora)
 
-Place unpacked archives under [`datasets/`](datasets/) or set `FIT3D_ROOT` / `M3GYM_ROOT`. See [`datasets/README.md`](datasets/README.md).
+Place unpacked archives under [`datasets/<slug>/`](datasets/) or override with env vars listed in [`datasets/README.md`](datasets/README.md).
 
-Lightweight readers live in [`fitness_app/datasets/`](fitness_app/datasets/) (`Fit3DRoot`, `M3GYMRoot`). Smoke-check:
+Registry API in [`fitness_app/datasets/`](fitness_app/datasets/): `DatasetRoot`, `get_dataset(name)`, `list_dataset_names()`, `DATASET_REGISTRY`. Keys: `coco_keypoints`, `mpii_human_pose`, `yoga_pose`, `exercise_skeleton`, `human36m`. Validation is directory existence only.
 
-```bash
-python scripts/inspect_dataset.py --dataset fit3d --limit 10
-python scripts/inspect_dataset.py --dataset m3gym
+Example:
+
+```python
+from fitness_app.datasets import get_dataset
+
+get_dataset("coco_keypoints").validate()
 ```
 
 ## Architecture

@@ -1,14 +1,29 @@
-"""Dataset layout helpers for Fit3D and optional M3GYM."""
+"""Dataset layout registry for public pose / heuristic corpora (path-only validation)."""
 
-from fitness_app.datasets.fit3d import Fit3DRoot
-from fitness_app.datasets.m3gym import M3GYMRoot
-from fitness_app.datasets.paths import fit3d_root, m3gym_root, repo_root, require_exists
+from fitness_app.datasets import public_datasets as _public_datasets  # noqa: F401 - register datasets
+
+from fitness_app.datasets.base import (
+    DATASET_REGISTRY,
+    DatasetRoot,
+    get_dataset,
+    list_dataset_names,
+    register_dataset,
+)
+from fitness_app.datasets.paths import (
+    default_dataset_root,
+    repo_root,
+    require_exists,
+    resolve_dataset_root,
+)
 
 __all__ = [
-    "Fit3DRoot",
-    "M3GYMRoot",
-    "fit3d_root",
-    "m3gym_root",
+    "DATASET_REGISTRY",
+    "DatasetRoot",
+    "get_dataset",
+    "list_dataset_names",
+    "register_dataset",
     "repo_root",
+    "default_dataset_root",
+    "resolve_dataset_root",
     "require_exists",
 ]

@@ -1,42 +1,35 @@
-# Local datasets (Fit3D / M3GYM)
+# Local datasets (public pose / heuristic workflows)
 
-Large archives are **not** committed to git. Place unpacked data under this folder or point env vars elsewhere.
+Unpack archives **outside git** under `datasets/<slug>/` (see folders next to this file) or override paths with env vars below.
 
-## Fit3D
+Python API (path validation only; no downloads or parsers):
 
-1. Register and download from [Fit3D](https://fit3d.imar.ro/).
-2. Unzip so the layout matches [IMAR tooling expectations](https://github.com/sminchisescu-research/imar_vision_datasets_tools):
+```python
+from fitness_app.datasets import get_dataset
 
-   ```text
-   datasets/fit3d/
-     train/
-     test/
-     info.json
-     template.json    # optional
-   ```
-
-3. Override path if needed:
-
-   ```bash
-   set FIT3D_ROOT=D:\path\to\fit3d    # Windows
-   export FIT3D_ROOT=/path/to/fit3d   # Unix
-   ```
-
-Official visualization/evaluation notebooks live in `imar_vision_datasets_tools`; this repo only provides lightweight filesystem + `info.json` readers in `fitness_app.datasets`.
-
-## M3GYM
-
-[M3GYM](https://finalyou.github.io/M3GYM/) (CVPR 2025): when a public archive with a stable on-disk layout is available, unzip under `datasets/m3gym/` or set:
-
-```bash
-set M3GYM_ROOT=D:\path\to\m3gym
+get_dataset("coco_keypoints").validate()
 ```
 
-The stub reader (`fitness_app.datasets.m3gym`) documents that layout details are still TBD until release.
+See [`fitness_app/datasets/public_datasets.py`](../fitness_app/datasets/public_datasets.py) for registry keys.
 
-## Inspect from the repo root
+## Registry keys and env overrides
 
-```bash
-python scripts/inspect_dataset.py --dataset fit3d --limit 10
-python scripts/inspect_dataset.py --dataset m3gym
-```
+| Registry key | Default folder | Env var |
+|--------------|----------------|---------|
+| `coco_keypoints` | `datasets/coco_keypoints/` | `COCO_POSE_ROOT` |
+| `mpii_human_pose` | `datasets/mpii_human_pose/` | `MPII_POSE_ROOT` |
+| `yoga_pose` | `datasets/yoga_pose/` | `YOGA_POSE_ROOT` |
+| `exercise_skeleton` | `datasets/exercise_skeleton/` | `EXERCISE_SKELETON_ROOT` |
+| `human36m` | `datasets/human36m/` | `HUMAN36M_ROOT` |
+
+## Sources (manual download)
+
+| Dataset | Notes |
+|---------|--------|
+| [MS COCO](https://cocodataset.org/) | Images + person keypoint annotations (train/val). Typical layout includes `annotations/` and `train2017/` or `val2017/` after unzip; place under `coco_keypoints/` (any internal naming is fine). |
+| [MPII Human Pose](https://www.mpi-inf.mpg.de/departments/computer-vision-and-machine-learning/software-and-datasets/mpii-human-pose-dataset) | Images + annotation JSON/mat per official package; unzip under `mpii_human_pose/`. |
+| Yoga / static poses | Many forks on GitHub or Kaggle; structures vary. Place chosen corpus root under `yoga_pose/`. |
+| Exercise + skeleton features | Example discovery: Kaggle search *exercise recognition*, *mediapipe landmarks*. Place unpacked CSV/feature trees under `exercise_skeleton/`. |
+| [Human3.6M](http://vision.imar.ro/human3.6m/) | Academic license; layout depends on release. Place extracted root under `human36m/`. |
+
+This repo does **not** fetch or parse annotations yet; `validate()` only checks that the resolved directory exists.

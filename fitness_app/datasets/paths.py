@@ -11,20 +11,18 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def fit3d_root() -> Path:
-    """Fit3D root: ``FIT3D_ROOT`` env or ``datasets/fit3d`` under the repo."""
-    raw = os.environ.get("FIT3D_ROOT")
-    if raw:
-        return Path(raw).expanduser().resolve()
-    return repo_root() / "datasets" / "fit3d"
+def default_dataset_root(slug: str) -> Path:
+    """Default path ``datasets/<slug>`` under the repo."""
+    return repo_root() / "datasets" / slug
 
 
-def m3gym_root() -> Path:
-    """M3GYM root: ``M3GYM_ROOT`` env or ``datasets/m3gym`` under the repo."""
-    raw = os.environ.get("M3GYM_ROOT")
-    if raw:
-        return Path(raw).expanduser().resolve()
-    return repo_root() / "datasets" / "m3gym"
+def resolve_dataset_root(env_var_name: str | None, slug: str) -> Path:
+    """Resolve root from ``env_var_name`` if set and non-empty, else ``default_dataset_root(slug)``."""
+    if env_var_name:
+        raw = os.environ.get(env_var_name)
+        if raw:
+            return Path(raw).expanduser().resolve()
+    return default_dataset_root(slug)
 
 
 def require_exists(path: Path, what: str) -> Path:
