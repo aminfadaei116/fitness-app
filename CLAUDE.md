@@ -62,6 +62,17 @@ python phone_camera.py --ip 10.88.111.11:8080 --record --width 960
 
 Keyboard shortcuts: `q` quit, `s` screenshot.
 
+## Datasets (Fit3D / M3GYM)
+
+Place unpacked archives under [`datasets/`](datasets/) or set `FIT3D_ROOT` / `M3GYM_ROOT`. See [`datasets/README.md`](datasets/README.md).
+
+Lightweight readers live in [`fitness_app/datasets/`](fitness_app/datasets/) (`Fit3DRoot`, `M3GYMRoot`). Smoke-check:
+
+```bash
+python scripts/inspect_dataset.py --dataset fit3d --limit 10
+python scripts/inspect_dataset.py --dataset m3gym
+```
+
 ## Architecture
 
 [phone_camera.py](phone_camera.py) — CLI entry point (`main`). Sets `live=True` for network/webcam sources (reconnects on drop) and `live=False` for files (stops at end).

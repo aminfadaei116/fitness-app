@@ -206,3 +206,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Local dataset blobs (keep datasets/README.md and **/.gitkeep tracked)
+datasets/fit3d/train/
+datasets/fit3d/test/
+datasets/m3gym/**
+!datasets/m3gym/.gitkeep
