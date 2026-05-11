@@ -1,12 +1,11 @@
 # Core — required for phone_camera.py (capture, display, recording)
 opencv-python>=4.8.0
-# NumPy 1.26 has no wheels for Python 3.13 — pip tries to compile from source without MSVC.
+# NumPy 1.x wheels don't exist for Python 3.13; pin via marker to avoid source builds.
 numpy>=1.24.0,<2.0.0; python_version < "3.13"
 numpy>=2.0.0,<3.0.0; python_version >= "3.13"
 
-# MediaPipe pose (legacy mp.solutions on Py<=3.12 + mediapipe==0.10.21; Tasks API on 3.13+ wheels)
-mediapipe==0.10.21; python_version < "3.13"
-mediapipe>=0.10.30,<0.11; python_version >= "3.13"
+# MediaPipe Tasks PoseLandmarker (--pose mediapipe)
+mediapipe>=0.10.30,<0.11
 
 # YOLOv11-pose (--pose yolo); model loads on first run
 ultralytics

@@ -38,6 +38,21 @@ def _ensure_pose_landmarker_model() -> str:
     return str(dest)
 
 
+def landmarks_to_array(landmarks_list) -> np.ndarray:
+    """Build ``(33, 4)`` array ``x, y, z, visibility`` from Tasks ``NormalizedLandmark`` sequence."""
+    out = np.zeros((33, 4), dtype=np.float64)
+    for i in range(33):
+        lm = landmarks_list[i]
+        vis = lm.visibility if lm.visibility is not None else 1.0
+        out[i] = (
+            lm.x if lm.x is not None else 0.0,
+            lm.y if lm.y is not None else 0.0,
+            lm.z if lm.z is not None else 0.0,
+            float(vis),
+        )
+    return out
+
+
 def draw_depth_overlay(frame: np.ndarray, landmarks) -> None:
     x_offset, y_start, line_h = 10, 20, 18
     cv2.rectangle(frame, (0, 0), (170, line_h * len(_DEPTH_LANDMARKS) + 8), (0, 0, 0), -1)
@@ -53,74 +68,33 @@ def draw_depth_overlay(frame: np.ndarray, landmarks) -> None:
 
 
 class MediaPipePoseEstimator:
-    """Pose estimator backed by MediaPipe Pose (legacy solutions API or Tasks PoseLandmarker)."""
+    """Pose estimator backed by MediaPipe Tasks ``PoseLandmarker`` (VIDEO mode)."""
 
     def __init__(self) -> None:
         import mediapipe as mp
+        from mediapipe.tasks.python import vision
+        from mediapipe.tasks.python.vision import drawing_utils as tasks_drawing
+        from mediapipe.tasks.python.vision.core import image as mp_image_lib
 
-        self._legacy = hasattr(mp, "solutions")
-        if self._legacy:
-            mp_pose = mp.solutions.pose
-            self._drawing = mp.solutions.drawing_utils
-            self._mp_pose = mp_pose
-            self._pose = mp_pose.Pose(
-                static_image_mode=False,
-                model_complexity=1,
-                smooth_landmarks=True,
-                enable_segmentation=False,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5,
-            )
-            self._landmarker = None
-            self._ts_ms = 0
-            self._drawing_utils = None
-            self._pose_connections = None
-            self._mp_image_lib = None
-        else:
-            self._drawing = None
-            self._mp_pose = None
-            self._pose = None
-            from mediapipe.tasks.python import vision
-            from mediapipe.tasks.python.vision import drawing_utils as tasks_drawing
-
-            model_path = _ensure_pose_landmarker_model()
-            options = vision.PoseLandmarkerOptions(
-                base_options=mp.tasks.BaseOptions(model_asset_path=model_path),
-                running_mode=vision.RunningMode.VIDEO,
-                num_poses=1,
-                min_pose_detection_confidence=0.5,
-                min_pose_presence_confidence=0.5,
-                min_tracking_confidence=0.5,
-                output_segmentation_masks=False,
-            )
-            self._landmarker = vision.PoseLandmarker.create_from_options(options)
-            self._ts_ms = 0
-            self._drawing_utils = tasks_drawing
-            self._pose_connections = vision.PoseLandmarksConnections.POSE_LANDMARKS
-            from mediapipe.tasks.python.vision.core import image as mp_image_lib
-
-            self._mp_image_lib = mp_image_lib
+        model_path = _ensure_pose_landmarker_model()
+        options = vision.PoseLandmarkerOptions(
+            base_options=mp.tasks.BaseOptions(model_asset_path=model_path),
+            running_mode=vision.RunningMode.VIDEO,
+            num_poses=1,
+            min_pose_detection_confidence=0.5,
+            min_pose_presence_confidence=0.5,
+            min_tracking_confidence=0.5,
+            output_segmentation_masks=False,
+        )
+        self._landmarker = vision.PoseLandmarker.create_from_options(options)
+        self._drawing_utils = tasks_drawing
+        self._pose_connections = vision.PoseLandmarksConnections.POSE_LANDMARKS
+        self._mp_image_lib = mp_image_lib
+        self._ts_ms = 0
+        self.last_landmarks: np.ndarray | None = None
 
     def process(self, frame: np.ndarray) -> np.ndarray:
-        if self._legacy:
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            rgb.flags.writeable = False
-            results = self._pose.process(rgb)
-            rgb.flags.writeable = True
-            out = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-
-            if results.pose_landmarks:
-                self._drawing.draw_landmarks(
-                    out,
-                    results.pose_landmarks,
-                    self._mp_pose.POSE_CONNECTIONS,
-                    landmark_drawing_spec=self._drawing.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=3),
-                    connection_drawing_spec=self._drawing.DrawingSpec(color=(255, 255, 0), thickness=2),
-                )
-                draw_depth_overlay(out, results.pose_landmarks.landmark)
-
-            return out
-
+        self.last_landmarks = None
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         rgb = np.ascontiguousarray(rgb)
         mp_image = self._mp_image_lib.Image(
@@ -132,6 +106,7 @@ class MediaPipePoseEstimator:
         out = frame.copy()
         if result.pose_landmarks:
             landmarks = result.pose_landmarks[0]
+            self.last_landmarks = landmarks_to_array(landmarks)
             self._drawing_utils.draw_landmarks(
                 out,
                 landmarks,
@@ -146,10 +121,7 @@ class MediaPipePoseEstimator:
         return out
 
     def close(self) -> None:
-        if self._legacy:
-            self._pose.close()
-        elif self._landmarker is not None:
-            self._landmarker.close()
+        self._landmarker.close()
 
 
 class YOLOPoseEstimator:

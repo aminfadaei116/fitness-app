@@ -21,8 +21,8 @@ Install only the backends you need:
 # Core (always required)
 pip install opencv-python "numpy>=1.24.0,<2.0.0"
 
-# MediaPipe (default pose backend)
-pip install mediapipe==0.10.21
+# MediaPipe (default pose backend, Tasks PoseLandmarker)
+pip install "mediapipe>=0.10.30,<0.11"
 
 # YOLO (--pose yolo)
 pip install ultralytics
@@ -76,6 +76,16 @@ from fitness_app.datasets import get_dataset
 get_dataset("coco_keypoints").validate()
 ```
 
+## Coaching (experimental)
+
+Heuristic squat feedback uses MediaPipe landmarks (joint angles + phase machine). Requires upright-ish camera; not medical advice.
+
+```bash
+python phone_camera.py --webcam --coach squat
+```
+
+Uses `--pose mediapipe` automatically. `--coach` is incompatible with `--pose yolo` or `--pose mmpose`.
+
 ## Architecture
 
 [phone_camera.py](phone_camera.py) — CLI entry point (`main`). Sets `live=True` for network/webcam sources (reconnects on drop) and `live=False` for files (stops at end).
@@ -86,10 +96,13 @@ get_dataset("coco_keypoints").validate()
 - `open_file` / `open_webcam` — open local file or webcam by device index
 
 **[fitness_app/pose.py](fitness_app/pose.py)**
-- `MediaPipePoseEstimator` — MediaPipe Pose (model_complexity=1), draws skeleton + z-depth HUD via `draw_depth_overlay`
+- `MediaPipePoseEstimator` — MediaPipe Tasks `PoseLandmarker` (VIDEO mode); auto-downloads `pose_landmarker_lite.task` to `~/.cache/fitness-app/`; draws skeleton + z-depth HUD via `draw_depth_overlay`; sets **`last_landmarks`** `(33, 4)` array `x,y,z,visibility` when a pose is found (for coaching).
 - `YOLOPoseEstimator` — YOLOv11-pose with ByteTrack multi-person tracking; loads `yolo11n-pose.pt` (committed to repo)
 - `MMPosePoseEstimator` — MMPoseInferencer (RTMPose-m); forces CPU on Apple Silicon because MPS lacks NMS ops
 - `_ESTIMATORS` registry dict + `build_estimator(name)` factory — all models imported lazily
+
+**[fitness_app/coaching/](fitness_app/coaching/)**
+- `geometry`, `squat_features`, `squat_phase`, `squat_rules`, `squat_coach` — heuristic squat cues; **`--coach squat`** in `phone_camera.py`. See [`fitness_app/coaching/README.md`](fitness_app/coaching/README.md) for extension notes.
 
 **To add a new pose model:** implement a class with `process(frame: np.ndarray) -> np.ndarray` and `close()`, then register it in `_ESTIMATORS`.
 

@@ -8,6 +8,7 @@ Usage:
     python phone_camera.py --ip 10.88.111.11:8080 --pose mediapipe
     python phone_camera.py --url http://10.88.111.11:8080/video --pose --record
     python phone_camera.py --file /path/to/video.mp4 --pose
+    python phone_camera.py --webcam --coach squat
 """
 
 import argparse
@@ -16,6 +17,7 @@ import cv2
 
 from fitness_app.stream import build_url, open_stream, open_file, open_webcam
 from fitness_app.pose import build_estimator
+from fitness_app.coaching import build_coach, draw_coaching_hud
 
 
 def main() -> None:
@@ -31,7 +33,15 @@ def main() -> None:
                         help="Pose estimation model to use (default: mediapipe)")
     parser.add_argument("--record", action="store_true",           help="Save output to output.mp4")
     parser.add_argument("--width",  type=int, default=0,           help="Resize display width in pixels (0 = original)")
+    parser.add_argument("--coach", metavar="NAME", choices=("squat",), default=None,
+                        help="Heuristic coaching overlay (requires MediaPipe pose)")
     args = parser.parse_args()
+
+    if args.coach:
+        if args.pose is None:
+            args.pose = "mediapipe"
+        elif args.pose != "mediapipe":
+            parser.error("--coach requires --pose mediapipe")
 
     if args.file:
         cap = open_file(args.file)
@@ -45,6 +55,7 @@ def main() -> None:
         live = True
 
     estimator = build_estimator(args.pose) if args.pose else None
+    squat_coach = build_coach(args.coach) if args.coach else None
 
     writer = None
     if args.record:
@@ -69,6 +80,11 @@ def main() -> None:
 
         if estimator:
             frame = estimator.process(frame)
+
+        if squat_coach is not None:
+            lm = getattr(estimator, "last_landmarks", None) if estimator else None
+            lines = squat_coach.update(frame, lm)
+            draw_coaching_hud(frame, lines)
 
         display = frame
         if args.width > 0:

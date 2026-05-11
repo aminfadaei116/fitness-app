@@ -41,7 +41,7 @@ pip install opencv-python "numpy>=1.24.0,<2.0.0"
 #### MediaPipe (default, easiest)
 
 ```bash
-pip install mediapipe==0.10.21
+pip install "mediapipe>=0.10.30,<0.11"
 ```
 
 #### YOLOv11-pose (via Ultralytics)
@@ -130,6 +130,14 @@ python phone_camera.py --webcam --pose mmpose
 python phone_camera.py --file clip.mp4 --pose mmpose --record --width 960
 ```
 
+### Coaching (experimental)
+
+`squat` mode shows phase + simple cues (depth, torso, symmetry). Requires **MediaPipe** (`--coach` implies `--pose mediapipe` if you omit `--pose`).
+
+```bash
+python phone_camera.py --webcam --coach squat
+```
+
 ---
 
 ## 5. Keyboard shortcuts
@@ -171,6 +179,6 @@ python phone_camera.py --file clip.mp4 --pose mmpose --record --width 960
 - Python 3.11 (conda recommended)
 - `opencv-python` — capture and display
 - `numpy<2.0` — required by OpenCV and MediaPipe
-- `mediapipe==0.10.21` — `--pose mediapipe`
+- `mediapipe>=0.10.30,<0.11` — `--pose mediapipe` (Tasks `PoseLandmarker`)
 - `ultralytics` — `--pose yolo`
 - `mmengine`, `mmcv`, `mmdet`, `mmpose` — `--pose mmpose`
