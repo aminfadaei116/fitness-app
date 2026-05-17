@@ -36,7 +36,8 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
-
+.DS_Store
+keypoints/
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -227,3 +228,8 @@ datasets/human36m/**
 /frontend/public/models/*.obj
 /frontend/public/models/*.mtl
 /frontend/public/models/*.bin
+# Captured keypoints and raw video recordings
+keypoints/**
+!keypoints/.gitkeep
+raw_capture.mp4
+replay_output.mp4

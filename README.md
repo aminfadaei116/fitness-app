@@ -1,6 +1,6 @@
 # Fitness App — Phone Camera Viewer
 
-Stream your phone's camera to your Mac/PC in real-time over Wi-Fi, or process a local video file, using Python and OpenCV. Optionally overlay 3-D pose landmarks via MediaPipe, YOLOv11-pose, or MMPose.
+Stream your phone's camera to your Mac/PC in real-time over Wi-Fi, or process a local video file, using Python and OpenCV. Optionally overlay 3-D pose landmarks via MediaPipe or YOLOv11-pose.
 
 ---
 
@@ -52,21 +52,6 @@ pip install ultralytics
 
 The model file `yolo11n-pose.pt` is downloaded automatically on first run.
 
-#### MMPose (top-down, RTMPose)
-
-MMPose requires building `mmcv` from source. Run in order:
-
-```bash
-pip install --upgrade pip setuptools wheel
-pip install -U openmim
-mim install mmengine
-pip install mmcv --no-build-isolation
-mim install "mmdet>=3.1.0" "mmpose>=1.1.0"
-```
-
-> On Apple Silicon (MPS backend), NMS ops are unsupported — the estimator forces CPU automatically.  
-> First run auto-downloads RTMPose-m (~50 MB).
-
 ---
 
 ## 3. Run the viewer
@@ -114,7 +99,6 @@ Pass `--pose [model]` to any source. Available models:
 |-------|------|-------|
 | MediaPipe | `--pose` or `--pose mediapipe` | Default. Full-body skeleton + z-depth HUD. |
 | YOLOv11-pose | `--pose yolo` | ByteTrack multi-person tracking. |
-| MMPose | `--pose mmpose` | RTMPose-m, top-down, highest accuracy. |
 
 ```bash
 # MediaPipe (default)
@@ -123,11 +107,8 @@ python phone_camera.py --webcam --pose
 # YOLO
 python phone_camera.py --webcam --pose yolo
 
-# MMPose
-python phone_camera.py --webcam --pose mmpose
-
-# File + MMPose + record
-python phone_camera.py --file clip.mp4 --pose mmpose --record --width 960
+# File + YOLO + record
+python phone_camera.py --file clip.mp4 --pose yolo --record --width 960
 ```
 
 ### Coaching (experimental)
@@ -158,8 +139,6 @@ python phone_camera.py --webcam --coach squat
 | Wrong IP | Phone IP can change; recheck it in the app each session |
 | Low FPS | Reduce resolution in IP Webcam settings, or use `--width` |
 | Port in use | Change port in app settings and pass `--port <new-port>` |
-| `No module named 'pkg_resources'` (mmcv build) | `pip install --upgrade setuptools`, then `pip install mmcv --no-build-isolation` |
-| MMPose MPS crash | Already handled — estimator forces CPU on Apple Silicon |
 
 ---
 
@@ -181,4 +160,3 @@ python phone_camera.py --webcam --coach squat
 - `numpy<2.0` — required by OpenCV and MediaPipe
 - `mediapipe>=0.10.30,<0.11` — `--pose mediapipe` (Tasks `PoseLandmarker`)
 - `ultralytics` — `--pose yolo`
-- `mmengine`, `mmcv`, `mmdet`, `mmpose` — `--pose mmpose`

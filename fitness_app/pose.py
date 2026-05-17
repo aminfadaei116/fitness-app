@@ -53,12 +53,41 @@ def landmarks_to_array(landmarks_list) -> np.ndarray:
     return out
 
 
-def draw_depth_overlay(frame: np.ndarray, landmarks) -> None:
+_POSE_CONNECTIONS = [
+    (0, 1), (1, 2), (2, 3), (3, 7), (0, 4), (4, 5), (5, 6), (6, 8),
+    (9, 10), (11, 12), (11, 13), (13, 15), (15, 17), (15, 19), (15, 21), (17, 19),
+    (12, 14), (14, 16), (16, 18), (16, 20), (16, 22), (18, 20),
+    (11, 23), (12, 24), (23, 24), (23, 25), (24, 26), (25, 27), (26, 28),
+    (27, 29), (28, 30), (29, 31), (30, 32), (27, 31), (28, 32),
+]
+
+
+def draw_pose_from_array(frame: np.ndarray, landmarks: np.ndarray, visibility_threshold: float = 0.5) -> None:
+    """Draw pose skeleton onto *frame* in-place from a ``(33, 4)`` x/y/z/vis array."""
+    h, w = frame.shape[:2]
+    pts = []
+    for i in range(33):
+        x, y, _, vis = landmarks[i]
+        if vis >= visibility_threshold:
+            pts.append((int(x * w), int(y * h)))
+        else:
+            pts.append(None)
+
+    for a, b in _POSE_CONNECTIONS:
+        if pts[a] is not None and pts[b] is not None:
+            cv2.line(frame, pts[a], pts[b], (255, 255, 0), 2, cv2.LINE_AA)
+
+    for pt in pts:
+        if pt is not None:
+            cv2.circle(frame, pt, 3, (0, 255, 0), -1, cv2.LINE_AA)
+
+
+def draw_depth_overlay(frame: np.ndarray, landmarks: np.ndarray) -> None:
+    """Draw z-depth HUD from a ``(33, 4)`` landmarks array."""
     x_offset, y_start, line_h = 10, 20, 18
     cv2.rectangle(frame, (0, 0), (170, line_h * len(_DEPTH_LANDMARKS) + 8), (0, 0, 0), -1)
     for i, (idx, name) in enumerate(_DEPTH_LANDMARKS.items()):
-        lm = landmarks[idx]
-        z = lm.z if lm.z is not None else 0.0
+        z = float(landmarks[idx, 2])
         label = f"{name}: z={z:+.3f}"
         cv2.putText(
             frame, label,
@@ -73,8 +102,6 @@ class MediaPipePoseEstimator:
     def __init__(self) -> None:
         import mediapipe as mp
         from mediapipe.tasks.python import vision
-        from mediapipe.tasks.python.vision import drawing_utils as tasks_drawing
-        from mediapipe.tasks.python.vision.core import image as mp_image_lib
 
         model_path = _ensure_pose_landmarker_model()
         options = vision.PoseLandmarkerOptions(
@@ -87,36 +114,23 @@ class MediaPipePoseEstimator:
             output_segmentation_masks=False,
         )
         self._landmarker = vision.PoseLandmarker.create_from_options(options)
-        self._drawing_utils = tasks_drawing
-        self._pose_connections = vision.PoseLandmarksConnections.POSE_LANDMARKS
-        self._mp_image_lib = mp_image_lib
         self._ts_ms = 0
         self.last_landmarks: np.ndarray | None = None
 
     def process(self, frame: np.ndarray) -> np.ndarray:
+        import mediapipe as mp
+
         self.last_landmarks = None
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         rgb = np.ascontiguousarray(rgb)
-        mp_image = self._mp_image_lib.Image(
-            image_format=self._mp_image_lib.ImageFormat.SRGB,
-            data=rgb,
-        )
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
         self._ts_ms += 33
         result = self._landmarker.detect_for_video(mp_image, self._ts_ms)
         out = frame.copy()
         if result.pose_landmarks:
-            landmarks = result.pose_landmarks[0]
-            self.last_landmarks = landmarks_to_array(landmarks)
-            self._drawing_utils.draw_landmarks(
-                out,
-                landmarks,
-                self._pose_connections,
-                landmark_drawing_spec=self._drawing_utils.DrawingSpec(
-                    color=(0, 255, 0), thickness=2, circle_radius=3
-                ),
-                connection_drawing_spec=self._drawing_utils.DrawingSpec(color=(255, 255, 0), thickness=2),
-            )
-            draw_depth_overlay(out, landmarks)
+            self.last_landmarks = landmarks_to_array(result.pose_landmarks[0])
+            draw_pose_from_array(out, self.last_landmarks)
+            draw_depth_overlay(out, self.last_landmarks)
 
         return out
 
@@ -141,32 +155,11 @@ class YOLOPoseEstimator:
         pass
 
 
-class MMPosePoseEstimator:
-    """Pose estimator backed by MMPose via MMPoseInferencer (top-down, ViTPose-compatible)."""
-
-    def __init__(self, pose2d: str = "human") -> None:
-        from mmpose.apis import MMPoseInferencer
-        # MPS backend lacks NMS op — force CPU
-        self._inferencer = MMPoseInferencer(pose2d=pose2d, device="cpu")
-
-    def process(self, frame: np.ndarray) -> np.ndarray:
-        gen = self._inferencer(frame, show=False, return_vis=True)
-        result = next(gen)
-        vis = result.get("visualization")
-        if vis:
-            return cv2.cvtColor(vis[0], cv2.COLOR_RGB2BGR)
-        return frame
-
-    def close(self) -> None:
-        pass
-
-
 # To add a new model: implement a class with process(frame) -> frame and close(),
 # then register it here.
 _ESTIMATORS: dict[str, type] = {
     "mediapipe": MediaPipePoseEstimator,
     "yolo": YOLOPoseEstimator,
-    "mmpose": MMPosePoseEstimator,
 }
 
 

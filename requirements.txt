@@ -9,10 +9,3 @@ mediapipe>=0.10.30,<0.11
 
 # YOLOv11-pose (--pose yolo); model loads on first run
 ultralytics
-
-# MMPose (--pose mmpose) — mmcv must be installed separately; do NOT pip-install mmpose alone:
-#   pip install --upgrade pip setuptools wheel
-#   pip install -U openmim
-#   mim install mmengine
-#   pip install mmcv --no-build-isolation
-#   mim install "mmdet>=3.1.0" "mmpose>=1.1.0"
