@@ -220,6 +220,14 @@ datasets/exercise_skeleton/**
 datasets/human36m/**
 !datasets/human36m/.gitkeep
 
+
+# Frontend Public Assets
+/frontend/public/models/*.fbx
+/frontend/public/models/*.glb
+/frontend/public/models/*.gltf
+/frontend/public/models/*.obj
+/frontend/public/models/*.mtl
+/frontend/public/models/*.bin
 # Captured keypoints and raw video recordings
 keypoints/**
 !keypoints/.gitkeep
