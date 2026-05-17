@@ -12,7 +12,9 @@ Usage:
 """
 
 import argparse
+import pickle
 import time
+from pathlib import Path
 import cv2
 
 from fitness_app.stream import build_url, open_stream, open_file, open_webcam
@@ -35,6 +37,8 @@ def main() -> None:
     parser.add_argument("--width",  type=int, default=0,           help="Resize display width in pixels (0 = original)")
     parser.add_argument("--coach", metavar="NAME", choices=("squat",), default=None,
                         help="Heuristic coaching overlay (requires MediaPipe pose)")
+    parser.add_argument("--save-keypoints", action="store_true",
+                        help="Save raw video to raw_capture.mp4 and per-frame keypoints to keypoints.pkl")
     args = parser.parse_args()
 
     if args.coach:
@@ -42,6 +46,9 @@ def main() -> None:
             args.pose = "mediapipe"
         elif args.pose != "mediapipe":
             parser.error("--coach requires --pose mediapipe")
+
+    if args.save_keypoints and args.pose is None:
+        parser.error("--save-keypoints requires --pose (e.g. --pose mediapipe)")
 
     if args.file:
         cap = open_file(args.file)
@@ -57,14 +64,26 @@ def main() -> None:
     estimator = build_estimator(args.pose) if args.pose else None
     squat_coach = build_coach(args.coach) if args.coach else None
 
+    capture_fps = cap.get(cv2.CAP_PROP_FPS) or 30
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
     writer = None
     if args.record:
-        fps = cap.get(cv2.CAP_PROP_FPS) or 30
-        w   = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        h   = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        writer = cv2.VideoWriter("output.mp4", fourcc, fps, (w, h))
+        writer = cv2.VideoWriter("output.mp4", fourcc, capture_fps, (w, h))
         print("Recording to output.mp4")
+
+    raw_writer = None
+    keypoints_log: list = []
+    kp_dir = Path("keypoints")
+    kp_dir.mkdir(exist_ok=True)
+    session_ts = int(time.time())
+    raw_video_path = kp_dir / f"raw_capture_{session_ts}.mp4"
+    kp_path = kp_dir / f"keypoints_{session_ts}.pkl"
+    if args.save_keypoints:
+        raw_writer = cv2.VideoWriter(str(raw_video_path), fourcc, capture_fps, (w, h))
+        print(f"Saving raw video to {raw_video_path} and keypoints to {kp_path}")
 
     print("Press  q  to quit,  s  to save a screenshot.")
 
@@ -78,8 +97,15 @@ def main() -> None:
             cap = open_stream(url)
             continue
 
+        if raw_writer is not None:
+            raw_writer.write(frame)
+
         if estimator:
             frame = estimator.process(frame)
+
+        if raw_writer is not None:
+            lm = getattr(estimator, "last_landmarks", None) if estimator else None
+            keypoints_log.append(lm.copy() if lm is not None else None)
 
         if squat_coach is not None:
             lm = getattr(estimator, "last_landmarks", None) if estimator else None
@@ -109,6 +135,12 @@ def main() -> None:
         estimator.close()
     if writer:
         writer.release()
+    if raw_writer:
+        raw_writer.release()
+        with open(kp_path, "wb") as f:
+            pickle.dump({"fps": capture_fps, "keypoints": keypoints_log}, f)
+        detected = sum(1 for k in keypoints_log if k is not None)
+        print(f"Saved {kp_path}  ({detected}/{len(keypoints_log)} frames with pose detected)")
     cv2.destroyAllWindows()
 
 

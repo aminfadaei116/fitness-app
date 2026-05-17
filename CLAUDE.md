@@ -26,13 +26,6 @@ pip install "mediapipe>=0.10.30,<0.11"
 
 # YOLO (--pose yolo) — yolo11n-pose.pt committed at repo root
 pip install ultralytics
-
-# MMPose (--pose mmpose) — requires openmim build order
-pip install --upgrade pip setuptools wheel
-pip install -U openmim
-mim install mmengine
-pip install mmcv --no-build-isolation
-mim install "mmdet>=3.1.0" "mmpose>=1.1.0"
 ```
 
 Python 3.13: [requirements.txt](requirements.txt) switches to `numpy>=2.0` and `mediapipe>=0.10.30` (Tasks API). Pose code currently uses legacy `mp.solutions.pose` — verify before bumping.
@@ -51,7 +44,6 @@ python phone_camera.py --file /path/to/clip.mp4
 # Pose overlay (model defaults to mediapipe)
 python phone_camera.py --webcam --pose
 python phone_camera.py --webcam --pose yolo
-python phone_camera.py --webcam --pose mmpose
 
 # Record full-res + downscale display
 python phone_camera.py --ip 10.88.111.11:8080 --record --width 960
@@ -75,7 +67,7 @@ Heuristic squat feedback uses MediaPipe landmarks (joint angles + phase machine)
 python phone_camera.py --webcam --coach squat
 ```
 
-Uses `--pose mediapipe` automatically. `--coach` is incompatible with `--pose yolo` or `--pose mmpose`.
+Uses `--pose mediapipe` automatically. `--coach` is incompatible with `--pose yolo`.
 
 ## Architecture
 
@@ -89,7 +81,6 @@ Uses `--pose mediapipe` automatically. `--coach` is incompatible with `--pose yo
 **[fitness_app/pose.py](fitness_app/pose.py)**
 - `MediaPipePoseEstimator` — MediaPipe Tasks `PoseLandmarker` (VIDEO mode); auto-downloads `pose_landmarker_lite.task` to `~/.cache/fitness-app/`; draws skeleton + z-depth HUD via `draw_depth_overlay`; sets **`last_landmarks`** `(33, 4)` array `x,y,z,visibility` when a pose is found (for coaching).
 - `YOLOPoseEstimator` — YOLOv11-pose with ByteTrack multi-person tracking; loads `yolo11n-pose.pt` (committed to repo)
-- `MMPosePoseEstimator` — MMPoseInferencer (RTMPose-m); forces CPU on Apple Silicon because MPS lacks NMS ops
 - `_ESTIMATORS` registry dict + `build_estimator(name)` factory — all models imported lazily
 
 **[fitness_app/coaching/](fitness_app/coaching/)**
