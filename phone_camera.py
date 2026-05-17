@@ -8,6 +8,7 @@ Usage:
     python phone_camera.py --ip 10.88.111.11:8080 --pose mediapipe
     python phone_camera.py --url http://10.88.111.11:8080/video --pose --record
     python phone_camera.py --file /path/to/video.mp4 --pose
+    python phone_camera.py --file /path/to/video.mp4 --save-keypoints --no-display
     python phone_camera.py --webcam --coach squat
 """
 
@@ -39,6 +40,8 @@ def main() -> None:
                         help="Heuristic coaching overlay (requires MediaPipe pose)")
     parser.add_argument("--save-keypoints", action="store_true",
                         help="Save raw video to raw_capture.mp4 and per-frame keypoints to keypoints.pkl")
+    parser.add_argument("--no-display", action="store_true",
+                        help="Skip display window (headless batch mode); useful with --file --save-keypoints")
     args = parser.parse_args()
 
     if args.coach:
@@ -48,7 +51,7 @@ def main() -> None:
             parser.error("--coach requires --pose mediapipe")
 
     if args.save_keypoints and args.pose is None:
-        parser.error("--save-keypoints requires --pose (e.g. --pose mediapipe)")
+        args.pose = "mediapipe"
 
     if args.file:
         cap = open_file(args.file)
@@ -81,11 +84,13 @@ def main() -> None:
     session_ts = int(time.time())
     raw_video_path = kp_dir / f"raw_capture_{session_ts}.mp4"
     kp_path = kp_dir / f"keypoints_{session_ts}.pkl"
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
     if args.save_keypoints:
         raw_writer = cv2.VideoWriter(str(raw_video_path), fourcc, capture_fps, (w, h))
         print(f"Saving raw video to {raw_video_path} and keypoints to {kp_path}")
 
-    print("Press  q  to quit,  s  to save a screenshot.")
+    if not args.no_display:
+        print("Press  q  to quit,  s  to save a screenshot.")
 
     while True:
         ok, frame = cap.read()
@@ -106,29 +111,32 @@ def main() -> None:
         if raw_writer is not None:
             lm = getattr(estimator, "last_landmarks", None) if estimator else None
             keypoints_log.append(lm.copy() if lm is not None else None)
+            if args.no_display and total_frames > 0 and len(keypoints_log) % 100 == 0:
+                print(f"  {len(keypoints_log)}/{total_frames} frames processed...")
 
         if squat_coach is not None:
             lm = getattr(estimator, "last_landmarks", None) if estimator else None
             lines = squat_coach.update(frame, lm)
             draw_coaching_hud(frame, lines)
 
-        display = frame
-        if args.width > 0:
-            ratio   = args.width / frame.shape[1]
-            display = cv2.resize(frame, (args.width, int(frame.shape[0] * ratio)))
-
-        cv2.imshow("Phone Camera  (q = quit)", display)
-
         if writer is not None:
             writer.write(frame)
 
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
-            break
-        if key == ord("s"):
-            filename = f"screenshot_{int(time.time())}.jpg"
-            cv2.imwrite(filename, frame)
-            print(f"Saved {filename}")
+        if not args.no_display:
+            display = frame
+            if args.width > 0:
+                ratio   = args.width / frame.shape[1]
+                display = cv2.resize(frame, (args.width, int(frame.shape[0] * ratio)))
+
+            cv2.imshow("Phone Camera  (q = quit)", display)
+
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q"):
+                break
+            if key == ord("s"):
+                filename = f"screenshot_{int(time.time())}.jpg"
+                cv2.imwrite(filename, frame)
+                print(f"Saved {filename}")
 
     cap.release()
     if estimator:
