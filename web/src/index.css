@@ -41,6 +41,24 @@ body {
   max-width: 14rem;
 }
 
+.toolbarSelect {
+  margin-left: 0.35rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 0.375rem;
+  color: inherit;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.inlineCheck {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.8125rem;
+  opacity: 0.9;
+}
+
 .viewport {
   position: relative;
   flex: 1;

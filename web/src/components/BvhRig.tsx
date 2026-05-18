@@ -4,9 +4,11 @@ import { Quaternion, Matrix4, Vector3 } from "three";
 type Props = {
   matrices: ReadonlyArray<Matrix4>;
   parentIndex: Int16Array;
+  /** Multiplier on world translations so the procedural overlay renders in meters. */
+  unitScale?: number;
 };
 
-export function BvhRig({ matrices, parentIndex }: Props) {
+export function BvhRig({ matrices, parentIndex, unitScale = 1 }: Props) {
   const boneColor = "#38bdf8";
   const jointColor = "#94f7c6";
 
@@ -29,8 +31,8 @@ export function BvhRig({ matrices, parentIndex }: Props) {
 
       const ea = wp.elements;
       const eb = wc.elements;
-      vA.set(ea[12], ea[13], ea[14]);
-      vB.set(eb[12], eb[13], eb[14]);
+      vA.set(ea[12] * unitScale, ea[13] * unitScale, ea[14] * unitScale);
+      vB.set(eb[12] * unitScale, eb[13] * unitScale, eb[14] * unitScale);
       axis.copy(vB).sub(vA);
       const len = axis.length();
       if (len < 1e-5) continue;
@@ -54,9 +56,9 @@ export function BvhRig({ matrices, parentIndex }: Props) {
 
     for (let i = 0; i < matrices.length; i++) {
       const em = matrices[i]!.elements;
-      const x = em[12]!;
-      const y = em[13]!;
-      const z = em[14]!;
+      const x = em[12]! * unitScale;
+      const y = em[13]! * unitScale;
+      const z = em[14]! * unitScale;
       nodes.push(
         <mesh key={`j-${String(i)}`} position={[x, y, z]} castShadow receiveShadow>
           <sphereGeometry args={[0.045, 10, 10]} />
@@ -66,7 +68,7 @@ export function BvhRig({ matrices, parentIndex }: Props) {
     }
 
     return nodes;
-  }, [matrices, parentIndex]);
+  }, [matrices, parentIndex, unitScale]);
 
   return <group>{meshes}</group>;
 }

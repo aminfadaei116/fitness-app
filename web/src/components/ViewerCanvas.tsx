@@ -2,18 +2,20 @@ import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls } from "@react-three/drei";
 import type { Matrix4 } from "three";
 
-import { BvhRig } from "./BvhRig.tsx";
+import type { CharacterManifestEntry } from "../characterManifest.ts";
+import type { BvhDocument } from "../bvh/types.ts";
+import { RigAndCharacterScene } from "./RigAndCharacter.tsx";
 
 type Props = {
-  matrices: ReadonlyArray<Matrix4> | null;
-  parentIndex: Int16Array | null;
+  readonly doc: BvhDocument | null;
+  readonly matrices: ReadonlyArray<Matrix4> | null;
+  readonly character: CharacterManifestEntry | null;
+  readonly overlaySkeleton: boolean;
 };
 
-export function ViewerCanvas({ matrices, parentIndex }: Props) {
-  const rig =
-    matrices && parentIndex && matrices.length > 0 ? (
-      <BvhRig matrices={matrices} parentIndex={parentIndex} />
-    ) : null;
+export function ViewerCanvas({ doc, matrices, character, overlaySkeleton }: Props) {
+  const showRig =
+    doc !== null && matrices !== null && matrices.length > 0 && doc.flatJoints.length > 0;
 
   return (
     <Canvas shadows camera={{ position: [2.4, 1.85, 3.6], fov: 45, near: 0.08, far: 200 }}>
@@ -34,7 +36,14 @@ export function ViewerCanvas({ matrices, parentIndex }: Props) {
         cellColor={"#1e293b"}
       />
       <OrbitControls makeDefault enableDamping dampingFactor={0.08} target={[0, 1, 0]} />
-      {rig}
+      {showRig && doc && matrices ? (
+        <RigAndCharacterScene
+          doc={doc}
+          matrices={matrices}
+          character={character}
+          overlaySkeleton={overlaySkeleton}
+        />
+      ) : null}
     </Canvas>
   );
 }

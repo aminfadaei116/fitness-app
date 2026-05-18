@@ -35,4 +35,14 @@ npm run preview
 npm test
 ```
 
-BVH parsing is covered by a synthetic two-bone snippet that follows the exporter’s channel naming.
+BVH parsing is covered by a synthetic two-bone snippet that follows the exporter's channel naming.
+
+## Skinned characters (GLB)
+
+1. Drop a **skinned** GLB under `public/models/` (Mixamo T-pose rigs work well).
+2. List it in `public/models/manifest.json` with `id`, `label`, `url` (for example `"/models/you.glb"`).
+3. Use `bonePrefix` if every joint is prefixed (for example `mixamorig:`).
+4. Tune `sceneScale` so the mesh matches BVH units; use `scale` for hip translation scaling in retarget.
+5. In the UI, pick **Character** or leave **Skeleton only**; use **Skeleton overlay** to draw the procedural cylinders on top.
+
+Retargeting uses `three/addons/utils/SkeletonUtils.js` and assumes GLB bone names (after prefix strip) line up with exporter names like `Hips`, `Spine`, `LeftArm`, etc.
