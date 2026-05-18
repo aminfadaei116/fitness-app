@@ -39,7 +39,7 @@ def main() -> None:
     parser.add_argument("--coach", metavar="NAME", choices=("squat",), default=None,
                         help="Heuristic coaching overlay (requires MediaPipe pose)")
     parser.add_argument("--save-keypoints", action="store_true",
-                        help="Save raw video to raw_capture.mp4 and per-frame keypoints to keypoints.pkl")
+                        help="Write keypoints/<id>/raw_capture.mp4 and keypoints/<id>/keypoints.pkl per run")
     parser.add_argument("--no-display", action="store_true",
                         help="Skip display window (headless batch mode); useful with --file --save-keypoints")
     args = parser.parse_args()
@@ -79,13 +79,17 @@ def main() -> None:
 
     raw_writer = None
     keypoints_log: list = []
-    kp_dir = Path("keypoints")
-    kp_dir.mkdir(exist_ok=True)
-    session_ts = int(time.time())
-    raw_video_path = kp_dir / f"raw_capture_{session_ts}.mp4"
-    kp_path = kp_dir / f"keypoints_{session_ts}.pkl"
+    raw_video_path: Path | None = None
+    kp_path: Path | None = None
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
     if args.save_keypoints:
+        kp_root = Path("keypoints")
+        kp_root.mkdir(exist_ok=True)
+        sample_id = str(int(time.time()))
+        sample_dir = kp_root / sample_id
+        sample_dir.mkdir(exist_ok=True)
+        raw_video_path = sample_dir / "raw_capture.mp4"
+        kp_path = sample_dir / "keypoints.pkl"
         raw_writer = cv2.VideoWriter(str(raw_video_path), fourcc, capture_fps, (w, h))
         print(f"Saving raw video to {raw_video_path} and keypoints to {kp_path}")
 
@@ -148,7 +152,7 @@ def main() -> None:
         with open(kp_path, "wb") as f:
             pickle.dump({"fps": capture_fps, "keypoints": keypoints_log}, f)
         detected = sum(1 for k in keypoints_log if k is not None)
-        print(f"Saved {kp_path}  ({detected}/{len(keypoints_log)} frames with pose detected)")
+        print(f"Saved {kp_path} ({detected}/{len(keypoints_log)} frames with pose detected)")
     cv2.destroyAllWindows()
 
 
