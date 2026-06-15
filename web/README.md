@@ -45,4 +45,7 @@ BVH parsing is covered by a synthetic two-bone snippet that follows the exporter
 4. Tune `sceneScale` so the mesh matches BVH units; use `scale` for hip translation scaling in retarget.
 5. In the UI, pick **Character** or leave **Skeleton only**; use **Skeleton overlay** to draw the procedural cylinders on top.
 
-Retargeting uses `three/addons/utils/SkeletonUtils.js` and assumes GLB bone names (after prefix strip) line up with exporter names like `Hips`, `Spine`, `LeftArm`, etc.
+Retargeting copies each source bone's world-space rotation onto the matching target
+bone's bind pose (names lined up after `bonePrefix` strip, e.g. `mixamorig:Hips` →
+`Hips`), plus the hip's world position. Only rotations are copied, so the character keeps
+its own bind bone-lengths and stays correctly sized regardless of source/target units.
