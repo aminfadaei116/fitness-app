@@ -53,6 +53,25 @@ def landmarks_to_array(landmarks_list) -> np.ndarray:
     return out
 
 
+def world_landmarks_to_array(landmarks_list) -> np.ndarray:
+    """Build ``(33, 4)`` ``x, y, z, visibility`` from Tasks **world** ``Landmark`` sequence.
+
+    World landmarks are metric (meters), hip-centered 3D — far more reliable depth than
+    the normalized image landmarks' weak ``z`` hint, which is why the mocap export uses them.
+    """
+    out = np.zeros((33, 4), dtype=np.float64)
+    for i in range(33):
+        lm = landmarks_list[i]
+        vis = lm.visibility if lm.visibility is not None else 1.0
+        out[i] = (
+            lm.x if lm.x is not None else 0.0,
+            lm.y if lm.y is not None else 0.0,
+            lm.z if lm.z is not None else 0.0,
+            float(vis),
+        )
+    return out
+
+
 _POSE_CONNECTIONS = [
     (0, 1), (1, 2), (2, 3), (3, 7), (0, 4), (4, 5), (5, 6), (6, 8),
     (9, 10), (11, 12), (11, 13), (13, 15), (15, 17), (15, 19), (15, 21), (17, 19),
@@ -116,11 +135,14 @@ class MediaPipePoseEstimator:
         self._landmarker = vision.PoseLandmarker.create_from_options(options)
         self._ts_ms = 0
         self.last_landmarks: np.ndarray | None = None
+        #: Metric hip-centered 3D landmarks for the current frame (used by the mocap export).
+        self.last_world_landmarks: np.ndarray | None = None
 
     def process(self, frame: np.ndarray) -> np.ndarray:
         import mediapipe as mp
 
         self.last_landmarks = None
+        self.last_world_landmarks = None
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         rgb = np.ascontiguousarray(rgb)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
@@ -131,6 +153,8 @@ class MediaPipePoseEstimator:
             self.last_landmarks = landmarks_to_array(result.pose_landmarks[0])
             draw_pose_from_array(out, self.last_landmarks)
             draw_depth_overlay(out, self.last_landmarks)
+        if result.pose_world_landmarks:
+            self.last_world_landmarks = world_landmarks_to_array(result.pose_world_landmarks[0])
 
         return out
 

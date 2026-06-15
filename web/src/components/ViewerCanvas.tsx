@@ -11,9 +11,17 @@ type Props = {
   readonly matrices: ReadonlyArray<Matrix4> | null;
   readonly character: CharacterManifestEntry | null;
   readonly overlaySkeleton: boolean;
+  /** Flat-joint index to emphasise in the procedural overlay (debug correspondence). */
+  readonly highlightIndex?: number | null;
 };
 
-export function ViewerCanvas({ doc, matrices, character, overlaySkeleton }: Props) {
+export function ViewerCanvas({
+  doc,
+  matrices,
+  character,
+  overlaySkeleton,
+  highlightIndex = null,
+}: Props) {
   const showRig =
     doc !== null && matrices !== null && matrices.length > 0 && doc.flatJoints.length > 0;
 
@@ -42,6 +50,7 @@ export function ViewerCanvas({ doc, matrices, character, overlaySkeleton }: Prop
           matrices={matrices}
           character={character}
           overlaySkeleton={overlaySkeleton}
+          highlightIndex={highlightIndex}
         />
       ) : null}
     </Canvas>

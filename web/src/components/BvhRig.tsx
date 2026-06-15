@@ -6,11 +6,14 @@ type Props = {
   parentIndex: Int16Array;
   /** Multiplier on world translations so the procedural overlay renders in meters. */
   unitScale?: number;
+  /** Flat-joint index to emphasise (debug correspondence); rendered larger and highlighted. */
+  highlightIndex?: number | null;
 };
 
-export function BvhRig({ matrices, parentIndex, unitScale = 1 }: Props) {
+export function BvhRig({ matrices, parentIndex, unitScale = 1, highlightIndex = null }: Props) {
   const boneColor = "#38bdf8";
   const jointColor = "#94f7c6";
+  const highlightColor = "#facc15";
 
   const meshes = useMemo(() => {
     const up = new Vector3(0, 1, 0);
@@ -59,16 +62,23 @@ export function BvhRig({ matrices, parentIndex, unitScale = 1 }: Props) {
       const x = em[12]! * unitScale;
       const y = em[13]! * unitScale;
       const z = em[14]! * unitScale;
+      const hi = i === highlightIndex;
       nodes.push(
         <mesh key={`j-${String(i)}`} position={[x, y, z]} castShadow receiveShadow>
-          <sphereGeometry args={[0.045, 10, 10]} />
-          <meshStandardMaterial color={jointColor} roughness={0.35} metalness={0.2} />
+          <sphereGeometry args={[hi ? 0.08 : 0.045, 14, 14]} />
+          <meshStandardMaterial
+            color={hi ? highlightColor : jointColor}
+            emissive={hi ? highlightColor : "#000000"}
+            emissiveIntensity={hi ? 0.6 : 0}
+            roughness={0.35}
+            metalness={0.2}
+          />
         </mesh>,
       );
     }
 
     return nodes;
-  }, [matrices, parentIndex, unitScale]);
+  }, [matrices, parentIndex, unitScale, highlightIndex]);
 
   return <group>{meshes}</group>;
 }

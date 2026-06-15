@@ -159,6 +159,8 @@ export type RigSceneProps = {
   readonly matrices: ReadonlyArray<Matrix4> | null;
   readonly character: CharacterManifestEntry | null;
   readonly overlaySkeleton: boolean;
+  /** Flat-joint index to emphasise in the procedural overlay (debug correspondence). */
+  readonly highlightIndex?: number | null;
 };
 
 function hipFlatIndex(
@@ -173,7 +175,13 @@ function hipFlatIndex(
 }
 
 /** Invisible BVH driver + optional character (glTF / FBX skinned rig, OBJ hip-follow) + optional procedural overlay. */
-export function RigAndCharacterScene({ doc, matrices, character, overlaySkeleton }: RigSceneProps) {
+export function RigAndCharacterScene({
+  doc,
+  matrices,
+  character,
+  overlaySkeleton,
+  highlightIndex = null,
+}: RigSceneProps) {
   /**
    * BVH joint offsets are template ratios, not metric. Normalising the rest pose to
    * ``TARGET_HEIGHT_M`` lets us drive the source skeleton, render the procedural overlay,
@@ -270,7 +278,12 @@ export function RigAndCharacterScene({ doc, matrices, character, overlaySkeleton
         </Suspense>
       ) : null}
       {showProcedural && matrices ? (
-        <BvhRig matrices={matrices} parentIndex={doc.parentIndex} unitScale={bvhMeterScale} />
+        <BvhRig
+          matrices={matrices}
+          parentIndex={doc.parentIndex}
+          unitScale={bvhMeterScale}
+          highlightIndex={highlightIndex}
+        />
       ) : null}
     </>
   );

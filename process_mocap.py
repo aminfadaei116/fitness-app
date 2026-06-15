@@ -57,6 +57,7 @@ def main() -> None:
 
     raw: list = data["keypoints"]
     fps = float(args.fps_override if args.fps_override is not None else data["fps"])
+    space = str(data.get("space", "image"))  # "world" for new captures, "image" for legacy
     if not raw:
         raise SystemExit("keypoints sequence is empty")
 
@@ -75,7 +76,7 @@ def main() -> None:
             mahalanobis_max=args.mahalanobis_max,
         )
 
-    joints_sequence = [landmarks_to_skeleton_joints(lm) for lm in smoothed_frames]
+    joints_sequence = [landmarks_to_skeleton_joints(lm, space=space) for lm in smoothed_frames]
 
     write_bvh(out_path, joints_sequence, fps=fps)
 

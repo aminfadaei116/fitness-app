@@ -10,6 +10,7 @@ import { poseFrame } from "./bvh/poseSkeleton.ts";
 import type { CharacterManifestEntry } from "./characterManifest.ts";
 import { PlaybackBar } from "./components/PlaybackBar.tsx";
 import { ViewerCanvas } from "./components/ViewerCanvas.tsx";
+import { DebugPage } from "./components/DebugPage.tsx";
 import { characterModelKind } from "./modelFormat.ts";
 
 function readManifest(payload: unknown): CharacterManifestEntry[] {
@@ -42,7 +43,7 @@ function readManifest(payload: unknown): CharacterManifestEntry[] {
   return out;
 }
 
-export default function App() {
+function ViewerApp() {
   const [doc, setDoc] = useState<BvhDocument | null>(null);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [frame, setFrame] = useState(0);
@@ -149,6 +150,9 @@ export default function App() {
         <span style={{ fontSize: ".8rem", opacity: 0.75 }}>
           {doc ? `${doc.frameCount} frames · ~${fpsLabel} fps export` : "No file loaded"}
         </span>
+        <a className="debugLink" href="#debug">
+          Debug ↗
+        </a>
         <label>
           Character
           <select
@@ -205,4 +209,15 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+/** Route between the BVH viewer and the pose-debug page via the URL hash (`#debug`). */
+export default function App() {
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const onHash = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  return hash === "#debug" ? <DebugPage /> : <ViewerApp />;
 }

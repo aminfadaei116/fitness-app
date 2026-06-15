@@ -113,7 +113,9 @@ def main() -> None:
             frame = estimator.process(frame)
 
         if raw_writer is not None:
-            lm = getattr(estimator, "last_landmarks", None) if estimator else None
+            # Save metric world landmarks (reliable depth) for the mocap export, not the
+            # normalized image landmarks whose weak z corrupts the root facing/yaw.
+            lm = getattr(estimator, "last_world_landmarks", None) if estimator else None
             keypoints_log.append(lm.copy() if lm is not None else None)
             if args.no_display and total_frames > 0 and len(keypoints_log) % 100 == 0:
                 print(f"  {len(keypoints_log)}/{total_frames} frames processed...")
@@ -150,7 +152,7 @@ def main() -> None:
     if raw_writer:
         raw_writer.release()
         with open(kp_path, "wb") as f:
-            pickle.dump({"fps": capture_fps, "keypoints": keypoints_log}, f)
+            pickle.dump({"fps": capture_fps, "keypoints": keypoints_log, "space": "world"}, f)
         detected = sum(1 for k in keypoints_log if k is not None)
         print(f"Saved {kp_path} ({detected}/{len(keypoints_log)} frames with pose detected)")
     cv2.destroyAllWindows()
